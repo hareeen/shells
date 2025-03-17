@@ -1,5 +1,5 @@
 {
-  description = "Harvester devshell";
+  description = "Rust Devshell";
 
   inputs = {
     # Principle inputs
@@ -33,7 +33,9 @@
         system,
         lib,
         ...
-      }: {
+      }: let
+        toolchain = pkgs.fenix.stable;
+      in {
         _module.args.pkgs = import self.inputs.nixpkgs {
           inherit system;
           overlays = [inputs.fenix.overlays.default];
@@ -41,17 +43,21 @@
         };
         devShells.default = pkgs.mkShell {
           name = "rust-shell";
-          meta.description = "Dev environment for Rust projects";
+          meta.description = "Dev environment for Rust Development";
           inputsFrom = [config.pre-commit.devShell];
           packages = with pkgs; [
-            (fenix.complete.withComponents [
+            openssl
+
+            (toolchain.withComponents [
               "cargo"
               "clippy"
               "rust-src"
               "rustc"
               "rustfmt"
             ])
-            rust-analyzer-nightly
+            rust-analyzer
+
+            alejandra
           ];
 
           shellHook = ''
@@ -63,7 +69,14 @@
         };
         pre-commit.settings = {
           hooks.alejandra.enable = true;
-          hooks.clippy.enable = true;
+          hooks.clippy = {
+            enable = true;
+            settings.allFeatures = true;
+            packageOverrides = {
+              cargo = toolchain.cargo;
+              clippy = toolchain.clippy;
+            };
+          };
         };
       };
     };
